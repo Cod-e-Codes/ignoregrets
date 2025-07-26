@@ -40,6 +40,16 @@ go install github.com/Cod-e-Codes/ignoregrets@latest
 ```
 Requires Go 1.24.4 or later.
 
+## Strategic Positioning
+
+`ignoregrets` is a focused tool for snapshotting and restoring Git-ignored files with commit awareness. Uses portable archives and checksums. Local-first, Git-state-agnostic, and integrates cleanly into existing workflows.
+
+- **What it is**: Narrow-scope tool for Git-ignored file management with commit awareness
+- **What it isn't**: Not a secret manager, backup solution, or configuration management system
+- **Integration**: Designed for CI/CD, automation, and development workflows
+
+→ **[Advanced Usage and Strategic Positioning](docs/ADVANCED_USAGE_AND_POSITIONING.md)**
+
 ## Quick Start
 
 1. Initialize in a Git repository:
@@ -63,6 +73,12 @@ Requires Go 1.24.4 or later.
    ignoregrets restore --dry-run  # Preview
    ignoregrets restore --force    # Restore
    ```
+
+### Next Steps
+
+- **Advanced workflows**: See [Advanced Usage and Strategic Positioning](docs/ADVANCED_USAGE_AND_POSITIONING.md)
+- **CI/CD integration**: Examples for GitHub Actions, deployment scripts, and automation
+- **Performance optimization**: Large repository patterns and best practices
 
 ## Commands
 
