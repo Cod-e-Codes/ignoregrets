@@ -3,6 +3,7 @@
 **Snapshots of your Git-ignored files. Because resets shouldn't mean regrets.**
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Cod-e-Codes/ignoregrets)](https://goreportcard.com/report/github.com/Cod-e-Codes/ignoregrets)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 `ignoregrets` is a lightweight, local-only CLI tool designed for solo developers to snapshot and restore Git-ignored files (e.g., build artifacts, `.env` files, IDE metadata) tied to Git commits. It prevents the loss of ephemeral or environment-specific files during branch switches or resets. Snapshots are stored as `.tar.gz` archives in `.ignoregrets/snapshots/` with a `manifest.json` for metadata and SHA256 checksums, ensuring integrity and safety.
 
