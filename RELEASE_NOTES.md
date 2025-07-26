@@ -1,3 +1,36 @@
+# ignoregrets v0.1.1-pre
+
+Pre-release update with code quality improvements.
+
+## Changes
+
+- Improved code quality with `gofmt -s` formatting
+- Reduced cyclomatic complexity in core functions:
+  - Split `RestoreSnapshot` into smaller, focused functions
+  - Improved test organization and readability
+- Added commit hash validation during restore
+
+## Installation
+
+### Windows
+1. Download `ignoregrets_v0.1.1-pre_windows_amd64.exe`
+2. Rename to `ignoregrets.exe`
+3. Move to a directory in your PATH
+
+### Linux
+1. Download `ignoregrets_v0.1.1-pre_linux_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.1-pre_linux_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+### macOS
+1. Download `ignoregrets_v0.1.1-pre_darwin_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.1-pre_darwin_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+For more information, see the [README](README.md).
+
+---
+
 # ignoregrets v0.1.0
 
 Initial release of `ignoregrets`, a lightweight CLI tool for snapshotting and restoring Git-ignored files.
