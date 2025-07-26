@@ -21,15 +21,14 @@
 
 Download the latest release from [GitHub Releases](https://github.com/Cod-e-Codes/ignoregrets/releases):
 
-#### Latest Stable (v0.1.0)
-- Windows: `ignoregrets_v0.1.0_windows_amd64.exe`
-- Linux: `ignoregrets_v0.1.0_linux_amd64`
-- macOS: `ignoregrets_v0.1.0_darwin_amd64`
+#### Latest Release (v0.1.2)
+- Windows: `ignoregrets_v0.1.2_windows_amd64.exe`
+- Linux: `ignoregrets_v0.1.2_linux_amd64`
+- macOS: `ignoregrets_v0.1.2_darwin_amd64`
 
-#### Latest Pre-release (v0.1.1-pre)
-- Windows: `ignoregrets_v0.1.1-pre_windows_amd64.exe`
-- Linux: `ignoregrets_v0.1.1-pre_linux_amd64`
-- macOS: `ignoregrets_v0.1.1-pre_darwin_amd64`
+#### Previous Releases
+- v0.1.1-pre (superseded)
+- v0.1.0
 
 ### From Source
 

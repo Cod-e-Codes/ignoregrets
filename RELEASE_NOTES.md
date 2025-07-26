@@ -1,6 +1,6 @@
-# ignoregrets v0.1.1-pre
+# ignoregrets v0.1.2
 
-Pre-release update with code quality improvements.
+Patch release with code quality improvements.
 
 ## Changes
 
@@ -13,21 +13,29 @@ Pre-release update with code quality improvements.
 ## Installation
 
 ### Windows
-1. Download `ignoregrets_v0.1.1-pre_windows_amd64.exe`
+1. Download `ignoregrets_v0.1.2_windows_amd64.exe`
 2. Rename to `ignoregrets.exe`
 3. Move to a directory in your PATH
 
 ### Linux
-1. Download `ignoregrets_v0.1.1-pre_linux_amd64`
-2. Make executable: `chmod +x ignoregrets_v0.1.1-pre_linux_amd64`
+1. Download `ignoregrets_v0.1.2_linux_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.2_linux_amd64`
 3. Move to `/usr/local/bin/ignoregrets`
 
 ### macOS
-1. Download `ignoregrets_v0.1.1-pre_darwin_amd64`
-2. Make executable: `chmod +x ignoregrets_v0.1.1-pre_darwin_amd64`
+1. Download `ignoregrets_v0.1.2_darwin_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.2_darwin_amd64`
 3. Move to `/usr/local/bin/ignoregrets`
 
 For more information, see the [README](README.md).
+
+---
+
+# ignoregrets v0.1.1-pre
+
+Pre-release update with code quality improvements.
+
+[Superseded by v0.1.2]
 
 ---
 
