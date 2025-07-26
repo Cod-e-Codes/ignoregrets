@@ -28,4 +28,7 @@ build/
 *.log
 
 # ignoregrets files
-.ignoregrets/ 
+.ignoregrets/
+
+# Build scripts
+build.ps1 
