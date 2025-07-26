@@ -12,12 +12,12 @@ import (
 	"github.com/Cod-e-Codes/ignoregrets/internal/config"
 )
 
-func TestCreateAndReadManifest(t *testing.T) {
-	// Create a temporary directory for testing
+// setupTestFiles creates test files and directories
+func setupTestFiles(t *testing.T) ([]string, func()) {
+	// Create test directory
 	if err := os.MkdirAll(filepath.Join("testdata", ".ignoregrets", "snapshots"), 0755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
-	defer os.RemoveAll("testdata")
 
 	// Create test files
 	testFiles := []string{
@@ -30,7 +30,15 @@ func TestCreateAndReadManifest(t *testing.T) {
 		}
 	}
 
-	// Create test config
+	cleanup := func() {
+		os.RemoveAll("testdata")
+	}
+
+	return testFiles, cleanup
+}
+
+// createTestManifest creates a test manifest
+func createTestManifest() (*Manifest, *config.Config) {
 	cfg := &config.Config{
 		Retention:    5,
 		SnapshotOn:   []string{"commit"},
@@ -40,7 +48,6 @@ func TestCreateAndReadManifest(t *testing.T) {
 		Include:      []string{".env"},
 	}
 
-	// Create test manifest
 	manifest := &Manifest{
 		CommitHash: "abc123",
 		Timestamp:  time.Now().UTC(),
@@ -49,7 +56,11 @@ func TestCreateAndReadManifest(t *testing.T) {
 		Config:     cfg,
 	}
 
-	// Create snapshot file
+	return manifest, cfg
+}
+
+// createTestSnapshot creates a test snapshot file
+func createTestSnapshot(t *testing.T, testFiles []string, manifest *Manifest) string {
 	snapshotPath := filepath.Join("testdata", ".ignoregrets", "snapshots", "test_snapshot.tar.gz")
 	file, err := os.Create(snapshotPath)
 	if err != nil {
@@ -57,13 +68,13 @@ func TestCreateAndReadManifest(t *testing.T) {
 	}
 	defer file.Close()
 
-	// Create tar.gz writers
 	gw := gzip.NewWriter(file)
 	defer gw.Close()
+
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Add test files to manifest
+	// Add test files to archive
 	for _, path := range testFiles {
 		if err := addFileToArchive(tw, path, manifest); err != nil {
 			t.Fatalf("Failed to add file to archive: %v", err)
@@ -88,32 +99,52 @@ func TestCreateAndReadManifest(t *testing.T) {
 		t.Fatalf("Failed to write manifest: %v", err)
 	}
 
-	// Close writers to flush data
-	tw.Close()
-	gw.Close()
+	return snapshotPath
+}
+
+// verifyManifest verifies the manifest contents
+func verifyManifest(t *testing.T, readManifest, originalManifest *Manifest) {
+	if readManifest.CommitHash != originalManifest.CommitHash {
+		t.Errorf("Expected commit hash %s, got %s", originalManifest.CommitHash, readManifest.CommitHash)
+	}
+	if readManifest.Index != originalManifest.Index {
+		t.Errorf("Expected index %d, got %d", originalManifest.Index, readManifest.Index)
+	}
+	if len(readManifest.Files) != len(originalManifest.Files) {
+		t.Errorf("Expected %d files, got %d", len(originalManifest.Files), len(readManifest.Files))
+	}
+	for path, checksum := range originalManifest.Files {
+		if readChecksum, ok := readManifest.Files[path]; !ok || readChecksum != checksum {
+			t.Errorf("Checksum mismatch for %s: expected %s, got %s", path, checksum, readChecksum)
+		}
+	}
+}
+
+func TestCreateAndReadManifest(t *testing.T) {
+	// Setup test environment
+	testFiles, cleanup := setupTestFiles(t)
+	defer cleanup()
+
+	// Create test manifest
+	manifest, _ := createTestManifest()
+
+	// Create snapshot file
+	snapshotPath := createTestSnapshot(t, testFiles, manifest)
 
 	// Read manifest back
-	file.Seek(0, 0)
+	file, err := os.Open(snapshotPath)
+	if err != nil {
+		t.Fatalf("Failed to open snapshot: %v", err)
+	}
+	defer file.Close()
+
 	readManifest, err := ReadManifest(file)
 	if err != nil {
 		t.Fatalf("Failed to read manifest: %v", err)
 	}
 
-	// Compare manifests
-	if readManifest.CommitHash != manifest.CommitHash {
-		t.Errorf("Expected commit hash %s, got %s", manifest.CommitHash, readManifest.CommitHash)
-	}
-	if readManifest.Index != manifest.Index {
-		t.Errorf("Expected index %d, got %d", manifest.Index, readManifest.Index)
-	}
-	if len(readManifest.Files) != len(manifest.Files) {
-		t.Errorf("Expected %d files, got %d", len(manifest.Files), len(readManifest.Files))
-	}
-	for path, checksum := range manifest.Files {
-		if readChecksum, ok := readManifest.Files[path]; !ok || readChecksum != checksum {
-			t.Errorf("Checksum mismatch for %s: expected %s, got %s", path, checksum, readChecksum)
-		}
-	}
+	// Verify manifest contents
+	verifyManifest(t, readManifest, manifest)
 }
 
 func TestFilterFiles(t *testing.T) {

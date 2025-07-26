@@ -134,6 +134,84 @@ func CreateSnapshot(cfg *config.Config) error {
 	return nil
 }
 
+// readManifestFromSnapshot reads the manifest from a snapshot file
+func readManifestFromSnapshot(file *os.File) (*Manifest, error) {
+	gr, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read tar header: %w", err)
+		}
+
+		if hdr.Name == "manifest.json" {
+			data, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read manifest: %w", err)
+			}
+
+			manifest := &Manifest{}
+			if err := json.Unmarshal(data, manifest); err != nil {
+				return nil, fmt.Errorf("failed to parse manifest: %w", err)
+			}
+			return manifest, nil
+		}
+	}
+
+	return nil, fmt.Errorf("manifest.json not found in snapshot")
+}
+
+// restoreFile restores a single file from the tar reader
+func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error {
+	// Skip manifest file
+	if hdr.Name == "manifest.json" {
+		return nil
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(hdr.Name); err == nil && !force {
+		if dryRun {
+			fmt.Printf("Would skip existing file: %s\n", hdr.Name)
+		} else {
+			fmt.Printf("Skipping existing file: %s\n", hdr.Name)
+		}
+		return nil
+	}
+
+	if dryRun {
+		fmt.Printf("Would restore: %s\n", hdr.Name)
+		return nil
+	}
+
+	// Create directory if needed
+	dir := filepath.Dir(hdr.Name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %s: %w", dir, err)
+	}
+
+	// Create file
+	f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
+	if err != nil {
+		return fmt.Errorf("failed to create file: %s: %w", hdr.Name, err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, tr); err != nil {
+		return fmt.Errorf("failed to write file: %s: %w", hdr.Name, err)
+	}
+
+	return nil
+}
+
 // RestoreSnapshot restores files from a snapshot
 func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 	snapshot, err := findSnapshot(commit, index)
@@ -147,6 +225,19 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 	}
 	defer file.Close()
 
+	// Read manifest first
+	manifest, err := readManifestFromSnapshot(file)
+	if err != nil {
+		return err
+	}
+
+	// Validate manifest
+	if manifest.CommitHash != commit {
+		return fmt.Errorf("snapshot commit hash mismatch: expected %s, got %s", commit, manifest.CommitHash)
+	}
+
+	// Reset reader for files
+	file.Seek(0, 0)
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
@@ -154,34 +245,6 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 	defer gr.Close()
 
 	tr := tar.NewReader(gr)
-
-	// First, read manifest
-	manifest := &Manifest{}
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		if hdr.Name == "manifest.json" {
-			data, err := io.ReadAll(tr)
-			if err != nil {
-				return fmt.Errorf("failed to read manifest: %w", err)
-			}
-			if err := json.Unmarshal(data, manifest); err != nil {
-				return fmt.Errorf("failed to parse manifest: %w", err)
-			}
-			break
-		}
-	}
-
-	// Reset reader for files
-	file.Seek(0, 0)
-	gr, _ = gzip.NewReader(file)
-	tr = tar.NewReader(gr)
 
 	// Restore files
 	for {
@@ -193,42 +256,9 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 			return fmt.Errorf("failed to read tar header: %w", err)
 		}
 
-		if hdr.Name == "manifest.json" {
-			continue
+		if err := restoreFile(tr, hdr, dryRun, force); err != nil {
+			return err
 		}
-
-		// Check if file exists
-		if _, err := os.Stat(hdr.Name); err == nil && !force {
-			if dryRun {
-				fmt.Printf("Would skip existing file: %s\n", hdr.Name)
-			} else {
-				fmt.Printf("Skipping existing file: %s\n", hdr.Name)
-			}
-			continue
-		}
-
-		if dryRun {
-			fmt.Printf("Would restore: %s\n", hdr.Name)
-			continue
-		}
-
-		// Create directory if needed
-		dir := filepath.Dir(hdr.Name)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory: %s: %w", dir, err)
-		}
-
-		// Create file
-		f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
-		if err != nil {
-			return fmt.Errorf("failed to create file: %s: %w", hdr.Name, err)
-		}
-
-		if _, err := io.Copy(f, tr); err != nil {
-			f.Close()
-			return fmt.Errorf("failed to write file: %s: %w", hdr.Name, err)
-		}
-		f.Close()
 	}
 
 	return nil
