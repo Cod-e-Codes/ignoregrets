@@ -1,4 +1,4 @@
-# ignoregrets: Product Requirements Document (PRD)
+# ignoregrets: Project Design Report (PDR)
 
 ## Overview
 
