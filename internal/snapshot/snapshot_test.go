@@ -181,3 +181,100 @@ func TestFilterFiles(t *testing.T) {
 		t.Error("Expected .env to be included")
 	}
 }
+
+func TestSymlinkHandling(t *testing.T) {
+	// Setup test environment
+	if err := os.MkdirAll(filepath.Join("testdata", ".ignoregrets", "snapshots"), 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+	defer os.RemoveAll("testdata")
+
+	// Create target and symlink
+	target := filepath.Join("testdata", "target.txt")
+	if err := os.WriteFile(target, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create target: %v", err)
+	}
+
+	link := filepath.Join("testdata", "link.txt")
+	if err := os.Symlink("target.txt", link); err != nil {
+		t.Fatalf("Failed to create symlink: %v", err)
+	}
+
+	// Create snapshot with symlink
+	manifest, _ := createTestManifest()
+	snapshotPath := createTestSnapshot(t, []string{link}, manifest)
+
+	// Verify manifest uses sentinel prefix for symlinks
+	value, exists := manifest.Files[link]
+	if !exists {
+		t.Fatal("Expected symlink in manifest")
+	}
+	if value != "symlink:target.txt" {
+		t.Errorf("Expected manifest value 'symlink:target.txt', got %q", value)
+	}
+
+	// Verify tar archive contains a proper symlink entry
+	file, err := os.Open(snapshotPath)
+	if err != nil {
+		t.Fatalf("Failed to open snapshot: %v", err)
+	}
+	defer file.Close()
+
+	gr, err := gzip.NewReader(file)
+	if err != nil {
+		t.Fatalf("Failed to read gzip: %v", err)
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	var foundSymlink bool
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			break
+		}
+		if hdr.Name == link {
+			foundSymlink = true
+			if hdr.Typeflag != tar.TypeSymlink {
+				t.Errorf("Expected Typeflag %d (symlink), got %d", tar.TypeSymlink, hdr.Typeflag)
+			}
+			if hdr.Linkname != "target.txt" {
+				t.Errorf("Expected Linkname 'target.txt', got %q", hdr.Linkname)
+			}
+		}
+	}
+	if !foundSymlink {
+		t.Error("Symlink entry not found in tar archive")
+	}
+
+	// Verify round-trip: restore symlink to a fresh location
+	restoreDir := filepath.Join("testdata", "restore")
+	if err := os.MkdirAll(restoreDir, 0755); err != nil {
+		t.Fatalf("Failed to create restore dir: %v", err)
+	}
+
+	file.Seek(0, 0)
+	gr2, _ := gzip.NewReader(file)
+	defer gr2.Close()
+	tr2 := tar.NewReader(gr2)
+
+	for {
+		hdr, err := tr2.Next()
+		if err != nil {
+			break
+		}
+		if hdr.Typeflag == tar.TypeSymlink {
+			restoredLink := filepath.Join(restoreDir, filepath.Base(hdr.Name))
+			if err := os.Symlink(hdr.Linkname, restoredLink); err != nil {
+				t.Fatalf("Failed to restore symlink: %v", err)
+			}
+			info, err := os.Lstat(restoredLink)
+			if err != nil {
+				t.Fatalf("Failed to stat restored symlink: %v", err)
+			}
+			if info.Mode()&os.ModeSymlink == 0 {
+				t.Error("Restored file is not a symlink")
+			}
+		}
+	}
+}

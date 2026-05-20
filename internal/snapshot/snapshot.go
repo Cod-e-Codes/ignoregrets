@@ -177,8 +177,8 @@ func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error
 		return nil
 	}
 
-	// Check if file exists
-	if _, err := os.Stat(hdr.Name); err == nil && !force {
+	// Check if file exists (use Lstat to detect existing symlinks)
+	if _, err := os.Lstat(hdr.Name); err == nil && !force {
 		if dryRun {
 			fmt.Printf("Would skip existing file: %s\n", hdr.Name)
 		} else {
@@ -198,7 +198,15 @@ func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error
 		return fmt.Errorf("failed to create directory: %s: %w", dir, err)
 	}
 
-	// Create file
+	// Handle symlinks
+	if hdr.Typeflag == tar.TypeSymlink {
+		if err := os.Symlink(hdr.Linkname, hdr.Name); err != nil {
+			return fmt.Errorf("failed to create symlink: %s: %w", hdr.Name, err)
+		}
+		return nil
+	}
+
+	// Create regular file
 	f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
 	if err != nil {
 		return fmt.Errorf("failed to create file: %s: %w", hdr.Name, err)
@@ -333,22 +341,46 @@ func findSnapshot(commit string, index int) (string, error) {
 
 // addFileToArchive adds a file to the tar archive and updates the manifest
 func addFileToArchive(tw *tar.Writer, path string, manifest *Manifest) error {
+	// Use Lstat instead of Stat to get symlink info without following it
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+
+	// Handle symlinks specially
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return err
+		}
+
+		hdr, err := tar.FileInfoHeader(info, target)
+		if err != nil {
+			return err
+		}
+		hdr.Name = path
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+
+		// Store sentinel-prefixed target so downstream logic can distinguish symlinks from regular files
+		manifest.Files[path] = "symlink:" + target
+		return nil
+	}
+
+	// For regular files
+	hdr, err := tar.FileInfoHeader(info, "")
+	if err != nil {
+		return err
+	}
+	hdr.Name = path
+
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	hdr := &tar.Header{
-		Name: path,
-		Mode: int64(info.Mode()),
-		Size: info.Size(),
-	}
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
