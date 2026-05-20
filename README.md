@@ -22,16 +22,16 @@
 
 ### From Binary (Recommended)
 
-Download the latest release from [GitHub Releases](https://github.com/Cod-e-Codes/ignoregrets/releases):
+Download the latest release from [GitHub Releases](https://github.com/Cod-e-Codes/ignoregrets/releases/latest):
 
-#### Latest Release (v0.1.2)
-- Windows: `ignoregrets_v0.1.2_windows_amd64.exe`
-- Linux: `ignoregrets_v0.1.2_linux_amd64`
-- macOS: `ignoregrets_v0.1.2_darwin_amd64`
+- Linux (amd64): `ignoregrets_0.1.3_linux_amd64.tar.gz`
+- Linux (arm64): `ignoregrets_0.1.3_linux_arm64.tar.gz`
+- macOS (amd64): `ignoregrets_0.1.3_darwin_amd64.tar.gz`
+- macOS (arm64): `ignoregrets_0.1.3_darwin_arm64.tar.gz`
+- Windows (amd64): `ignoregrets_0.1.3_windows_amd64.zip`
+- Windows (arm64): `ignoregrets_0.1.3_windows_arm64.zip`
 
-#### Previous Releases
-- v0.1.1-pre (superseded)
-- v0.1.0
+SHA256 checksums are provided in `checksums.txt` on the release page.
 
 ### From Source
 
@@ -211,7 +211,7 @@ snapshot_on: [commit]      # Git events for auto-snapshot
 restore_on: [checkout]     # Git events for auto-restore
 hooks_enabled: false       # Enable Git hooks
 exclude: ["*.log"]         # Glob patterns to exclude
-include: [".env"]         # Additional files to include
+include: [".env"]          # Additional files to include
 ```
 
 Override retention with CLI flags:
@@ -280,4 +280,4 @@ Code style: Follow Go conventions, use single-responsibility functions, and incl
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details. 
+MIT License - see [LICENSE](LICENSE) file for details.
