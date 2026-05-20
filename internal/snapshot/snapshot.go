@@ -333,22 +333,42 @@ func findSnapshot(commit string, index int) (string, error) {
 
 // addFileToArchive adds a file to the tar archive and updates the manifest
 func addFileToArchive(tw *tar.Writer, path string, manifest *Manifest) error {
+	// Use Lstat instead of Stat to get symlink info without following it
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+
+	hdr, err := tar.FileInfoHeader(info, "")
+	if err != nil {
+		return err
+	}
+	hdr.Name = path
+
+	// Handle symlinks specially
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return err
+		}
+		hdr.Linkname = target
+		hdr.Size = 0
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+
+		// For symlinks, just store the target path as the checksum
+		manifest.Files[path] = target
+		return nil
+	}
+
+	// For regular files
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	hdr := &tar.Header{
-		Name: path,
-		Mode: int64(info.Mode()),
-		Size: info.Size(),
-	}
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
