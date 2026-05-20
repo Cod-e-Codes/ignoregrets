@@ -116,10 +116,8 @@ Restore files from the latest snapshot for the current commit (or specified comm
   ```
   Output:
   ```
-  Would restore:
-  - build/output
-  - .env
-  No files will be restored (dry-run mode).
+  Would restore: build/output
+  Would restore: .env
   ```
 
 ### `status [--verbose]`
@@ -133,12 +131,20 @@ Compare current Git-ignored files to the latest snapshot for the current commit.
   Output:
   ```
   Snapshot for commit abc123:
-  - Unchanged: build/output
-  - Modified: .env
+
+  Unchanged files:
+    build/output
+
+  Modified files:
+    .env
     Old checksum: abc123...
     New checksum: def456...
-  - Added: newfile.txt
-  - Deleted: oldfile.log
+
+  New files:
+    newfile.txt
+
+  Deleted files:
+    oldfile.log
   ```
 
 ### `prune [--retention <N>]`
@@ -152,7 +158,7 @@ Delete older snapshots, keeping the latest N per commit (default: config `retent
   Output:
   ```
   Pruning snapshots for commit abc123:
-    Deleting abc123_20250726T0233_1.tar.gz
+  Deleting abc123_20250726T0233_1.tar.gz
   ```
 
 ### `list`
@@ -267,6 +273,11 @@ Enable hooks via:
 - **"manifest.json not found"**: Snapshot corrupted
 
 For Windows users: Git hooks are installed with appropriate permissions, but you may need to run with administrator privileges for certain operations.
+
+## Documentation
+
+- [Project design](docs/PROJECT_DESIGN.md): goals, layout, and command overview
+- [Advanced usage and positioning](docs/ADVANCED_USAGE_AND_POSITIONING.md): CI/CD patterns and integration examples
 
 ## Contributing
 

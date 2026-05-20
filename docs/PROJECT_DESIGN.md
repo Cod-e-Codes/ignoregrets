@@ -2,7 +2,7 @@
 
 ## Overview
 
-`ignoregrets` is a lightweight, local-only CLI tool for snapshotting and restoring Git-ignored files, addressing a personal need to preserve ephemeral or environment-specific files (e.g., build artifacts, editor settings, local configs like `.env` or IDE metadata) lost during branch switches or resets. Snapshots are stored in `.ignoregrets/` and tied to Git commits for version-aware restoration. The tool prioritizes simplicity, safety, and predictability for a solo developer’s workflow. **Snapshots of your Git-ignored files. Because resets shouldn’t mean regrets.**
+`ignoregrets` is a lightweight, local-only CLI tool for snapshotting and restoring Git-ignored files, addressing a personal need to preserve ephemeral or environment-specific files (e.g., build artifacts, editor settings, local configs like `.env` or IDE metadata) lost during branch switches or resets. Snapshots are stored in `.ignoregrets/` and tied to Git commits for version-aware restoration. The tool prioritizes simplicity, safety, and predictability for a solo developer's workflow. **Snapshots of your Git-ignored files. Because resets shouldn't mean regrets.**
 
 ## Goals
 
@@ -48,10 +48,10 @@ Each snapshot includes:
   Creates a snapshot of ignored files for the current HEAD. Fails if not in a Git repository.
 
 - `ignoregrets restore [--commit <sha>] [--snapshot <index>] [--force] [--dry-run]`  
-  Restores the latest snapshot (or specified by `--snapshot <index>`) for the current (or specified) commit. Skips if no snapshot exists. Requires `--force` to overwrite; `--dry-run` previews actions.
+  Restores the latest snapshot (or specified by `--snapshot <index>`) for the current (or specified) commit. Skips if no snapshot exists. Requires `--force` to overwrite existing files and symlinks; `--dry-run` previews actions.
 
-- `ignoregrets status`  
-  Compares current ignored files to the latest snapshot for the current commit, using checksums to report drift.
+- `ignoregrets status [--verbose]`  
+  Compares current ignored files to the latest snapshot for the current commit, using checksums to report drift. `--verbose` prints old and new checksums for modified files.
 
 - `ignoregrets prune [--retention <N>]`  
   Keeps the latest *N* snapshots per commit (by timestamp and index), deleting older ones.
@@ -137,4 +137,4 @@ A developer working on a project with a `build/` directory and `.env` file (both
 
 ## Summary
 
-`ignoregrets` solves a solo developer’s problem of losing Git-ignored files (e.g., build outputs, local configs, IDE settings) during branch switches or resets. It provides a simple, local-only solution to snapshot and restore these files, tied to Git commits, with a config-driven CLI and optional hooks. Enhanced with `inspect` and support for custom exclude rules, it ensures a reliable, friction-free workflow without cluttering Git. **Snapshots of your Git-ignored files. Because resets shouldn’t mean regrets.**
+`ignoregrets` solves a solo developer's problem of losing Git-ignored files (e.g., build outputs, local configs, IDE settings) during branch switches or resets. It provides a simple, local-only solution to snapshot and restore these files, tied to Git commits, with a config-driven CLI and optional hooks. Enhanced with `inspect` and support for custom exclude rules, it ensures a reliable, friction-free workflow without cluttering Git. **Snapshots of your Git-ignored files. Because resets shouldn't mean regrets.**

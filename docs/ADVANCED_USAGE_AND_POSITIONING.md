@@ -226,8 +226,9 @@ build: snapshot
 
 ### Common Issues
 ```bash
-# Debug snapshot creation
-ignoregrets snapshot -v  # If verbose flag exists
+# Debug snapshot creation (no verbose flag on snapshot; use inspect/status instead)
+ignoregrets inspect --verbose
+ignoregrets status --verbose
 
 # Verify Git integration
 git ls-files --others --exclude-standard
