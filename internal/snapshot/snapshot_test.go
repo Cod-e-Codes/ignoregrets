@@ -181,3 +181,32 @@ func TestFilterFiles(t *testing.T) {
 		t.Error("Expected .env to be included")
 	}
 }
+
+func TestSymlinkHandling(t *testing.T) {
+	// Setup test environment
+	if err := os.MkdirAll(filepath.Join("testdata", ".ignoregrets", "snapshots"), 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+	defer os.RemoveAll("testdata")
+
+	// Create target and symlink
+	target := filepath.Join("testdata", "target.txt")
+	if err := os.WriteFile(target, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create target: %v", err)
+	}
+
+	link := filepath.Join("testdata", "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("Failed to create symlink: %v", err)
+	}
+
+	// Create snapshot with symlink
+	testFiles := []string{link}
+	manifest, _ := createTestManifest()
+	createTestSnapshot(t, testFiles, manifest)
+
+	// Verify symlink was added to manifest
+	if _, exists := manifest.Files[link]; !exists {
+		t.Error("Expected symlink in manifest")
+	}
+}
