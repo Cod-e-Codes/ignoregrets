@@ -9,6 +9,12 @@ import (
 	"testing"
 )
 
+func chdirBack(dir string) {
+	if err := os.Chdir(dir); err != nil {
+		panic("restore working directory: " + err.Error())
+	}
+}
+
 func setupTestRepo(t *testing.T) (string, func()) {
 	// Create temporary directory
 	tmpDir, err := os.MkdirTemp("", "ignoregrets-test")
@@ -30,7 +36,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	// Initialize git repo
 	cmd := exec.Command("git", "init")
 	if err := cmd.Run(); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to initialize git repo: %v", err)
 	}
@@ -38,38 +44,38 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	// Configure git
 	cmd = exec.Command("git", "config", "user.name", "Test User")
 	if err := cmd.Run(); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to configure git user name: %v", err)
 	}
 	cmd = exec.Command("git", "config", "user.email", "test@example.com")
 	if err := cmd.Run(); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to configure git user email: %v", err)
 	}
 
 	// Create initial commit
 	if err := os.WriteFile("test.txt", []byte("test"), 0644); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 	cmd = exec.Command("git", "add", "test.txt")
 	if err := cmd.Run(); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to add test file: %v", err)
 	}
 	cmd = exec.Command("git", "commit", "-m", "Initial commit")
 	if err := cmd.Run(); err != nil {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create initial commit: %v", err)
 	}
 
 	cleanup := func() {
-		os.Chdir(oldDir)
+		chdirBack(oldDir)
 		os.RemoveAll(tmpDir)
 	}
 

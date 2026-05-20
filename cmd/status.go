@@ -43,12 +43,6 @@ Use --verbose for detailed per-file differences.`,
 			return fmt.Errorf("no snapshot found for current commit")
 		}
 
-		// Compare files
-		unchanged := make([]string, 0)
-		modified := make([]string, 0)
-		added := make([]string, 0)
-		deleted := make([]string, 0)
-
 		// Build map of current files and their checksums
 		currentChecksums := make(map[string]string)
 		for _, file := range currentFiles {
@@ -59,23 +53,12 @@ Use --verbose for detailed per-file differences.`,
 			currentChecksums[file] = checksum
 		}
 
-		// Compare with snapshot
-		for file, snapshotChecksum := range snapshot.Files {
-			currentChecksum, exists := currentChecksums[file]
-			if !exists {
-				deleted = append(deleted, file)
-			} else if currentChecksum != snapshotChecksum {
-				modified = append(modified, file)
-			} else {
-				unchanged = append(unchanged, file)
-			}
-			delete(currentChecksums, file)
-		}
-
-		// Remaining files in currentChecksums are new
-		for file := range currentChecksums {
-			added = append(added, file)
-		}
+		result := compareWithSnapshot(snapshot.Files, currentChecksums)
+		unchanged := result.unchanged
+		modified := result.modified
+		added := result.added
+		deleted := result.deleted
+		modifiedNewChecksums := result.modifiedNewChecksums
 
 		// Sort all slices for consistent output
 		sort.Strings(unchanged)
@@ -97,7 +80,7 @@ Use --verbose for detailed per-file differences.`,
 				fmt.Printf("  %s\n", file)
 				if verbose {
 					fmt.Printf("    Old checksum: %s\n", snapshot.Files[file])
-					fmt.Printf("    New checksum: %s\n", currentChecksums[file])
+					fmt.Printf("    New checksum: %s\n", modifiedNewChecksums[file])
 				}
 			}
 		}
@@ -121,6 +104,49 @@ Use --verbose for detailed per-file differences.`,
 func init() {
 	rootCmd.AddCommand(statusCmd)
 	statusCmd.Flags().BoolVar(&verbose, "verbose", false, "Show detailed file differences")
+}
+
+type statusCompareResult struct {
+	unchanged            []string
+	modified             []string
+	added                []string
+	deleted              []string
+	modifiedNewChecksums map[string]string
+}
+
+// compareWithSnapshot diffs snapshot file checksums against the current working tree.
+func compareWithSnapshot(snapshotFiles, currentChecksums map[string]string) statusCompareResult {
+	result := statusCompareResult{
+		unchanged:            make([]string, 0),
+		modified:             make([]string, 0),
+		added:                make([]string, 0),
+		deleted:              make([]string, 0),
+		modifiedNewChecksums: make(map[string]string),
+	}
+
+	remaining := make(map[string]string, len(currentChecksums))
+	for file, checksum := range currentChecksums {
+		remaining[file] = checksum
+	}
+
+	for file, snapshotChecksum := range snapshotFiles {
+		currentChecksum, exists := remaining[file]
+		if !exists {
+			result.deleted = append(result.deleted, file)
+		} else if currentChecksum != snapshotChecksum {
+			result.modified = append(result.modified, file)
+			result.modifiedNewChecksums[file] = currentChecksum
+		} else {
+			result.unchanged = append(result.unchanged, file)
+		}
+		delete(remaining, file)
+	}
+
+	for file := range remaining {
+		result.added = append(result.added, file)
+	}
+
+	return result
 }
 
 // calculateChecksum calculates the SHA256 checksum of a file

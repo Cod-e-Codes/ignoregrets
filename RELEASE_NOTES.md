@@ -1,3 +1,36 @@
+# ignoregrets v0.1.4
+
+Bug fix release for status, list, and restore behavior.
+
+## Changes
+
+- Fix `status --verbose` printing empty new checksums after comparison removed entries from the working map
+- Fix `list` showing snapshot filename length instead of manifest file count
+- Fix `restore --force` failing when replacing an existing symlink at the target path
+- Add regression tests for all three fixes
+- Move project design doc to `docs/PROJECT_DESIGN.md` and remove obsolete `SYSTEMPROMPT.md`
+
+## Installation
+
+### Windows
+1. Download `ignoregrets_v0.1.4_windows_amd64.exe`
+2. Rename to `ignoregrets.exe`
+3. Move to a directory in your PATH
+
+### Linux
+1. Download `ignoregrets_v0.1.4_linux_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.4_linux_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+### macOS
+1. Download `ignoregrets_v0.1.4_darwin_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.4_darwin_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+For more information, see the [README](README.md).
+
+---
+
 # ignoregrets v0.1.2
 
 Patch release with code quality improvements.

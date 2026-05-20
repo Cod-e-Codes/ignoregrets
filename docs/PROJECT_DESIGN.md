@@ -1,4 +1,4 @@
-# ignoregrets: Project Design Report (PDR)
+# ignoregrets: Project Design
 
 ## Overview
 

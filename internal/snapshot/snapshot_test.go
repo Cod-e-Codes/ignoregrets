@@ -182,6 +182,60 @@ func TestFilterFiles(t *testing.T) {
 	}
 }
 
+func TestRestoreFileForceOverwritesExistingSymlink(t *testing.T) {
+	dir := t.TempDir()
+	linkPath := filepath.Join(dir, "link.txt")
+	if err := os.Symlink("wrong-target", linkPath); err != nil {
+		t.Fatalf("failed to create existing symlink: %v", err)
+	}
+
+	hdr := &tar.Header{
+		Name:     linkPath,
+		Typeflag: tar.TypeSymlink,
+		Linkname: "right-target",
+		Mode:     0777,
+	}
+
+	if err := restoreFile(nil, hdr, false, true); err != nil {
+		t.Fatalf("restoreFile with force failed: %v", err)
+	}
+
+	target, err := os.Readlink(linkPath)
+	if err != nil {
+		t.Fatalf("failed to read restored symlink: %v", err)
+	}
+	if target != "right-target" {
+		t.Fatalf("symlink target = %q, want %q", target, "right-target")
+	}
+}
+
+func TestRestoreFileSkipsExistingSymlinkWithoutForce(t *testing.T) {
+	dir := t.TempDir()
+	linkPath := filepath.Join(dir, "link.txt")
+	if err := os.Symlink("keep-me", linkPath); err != nil {
+		t.Fatalf("failed to create existing symlink: %v", err)
+	}
+
+	hdr := &tar.Header{
+		Name:     linkPath,
+		Typeflag: tar.TypeSymlink,
+		Linkname: "replace-me",
+		Mode:     0777,
+	}
+
+	if err := restoreFile(nil, hdr, false, false); err != nil {
+		t.Fatalf("restoreFile without force failed: %v", err)
+	}
+
+	target, err := os.Readlink(linkPath)
+	if err != nil {
+		t.Fatalf("failed to read symlink: %v", err)
+	}
+	if target != "keep-me" {
+		t.Fatalf("symlink target = %q, want %q", target, "keep-me")
+	}
+}
+
 func TestSymlinkHandling(t *testing.T) {
 	// Setup test environment
 	if err := os.MkdirAll(filepath.Join("testdata", ".ignoregrets", "snapshots"), 0755); err != nil {
@@ -253,8 +307,13 @@ func TestSymlinkHandling(t *testing.T) {
 		t.Fatalf("Failed to create restore dir: %v", err)
 	}
 
-	file.Seek(0, 0)
-	gr2, _ := gzip.NewReader(file)
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Fatalf("Failed to reset snapshot reader: %v", err)
+	}
+	gr2, err := gzip.NewReader(file)
+	if err != nil {
+		t.Fatalf("Failed to read gzip: %v", err)
+	}
 	defer gr2.Close()
 	tr2 := tar.NewReader(gr2)
 

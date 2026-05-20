@@ -178,7 +178,9 @@ func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error
 	}
 
 	// Check if file exists (use Lstat to detect existing symlinks)
-	if _, err := os.Lstat(hdr.Name); err == nil && !force {
+	_, err := os.Lstat(hdr.Name)
+	exists := err == nil
+	if exists && !force {
 		if dryRun {
 			fmt.Printf("Would skip existing file: %s\n", hdr.Name)
 		} else {
@@ -190,6 +192,12 @@ func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error
 	if dryRun {
 		fmt.Printf("Would restore: %s\n", hdr.Name)
 		return nil
+	}
+
+	if exists && force {
+		if err := os.Remove(hdr.Name); err != nil {
+			return fmt.Errorf("failed to remove existing path: %s: %w", hdr.Name, err)
+		}
 	}
 
 	// Create directory if needed
@@ -245,7 +253,9 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 	}
 
 	// Reset reader for files
-	file.Seek(0, 0)
+	if _, err := file.Seek(0, 0); err != nil {
+		return fmt.Errorf("failed to reset snapshot reader: %w", err)
+	}
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)

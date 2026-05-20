@@ -24,12 +24,12 @@
 
 Download the latest release from [GitHub Releases](https://github.com/Cod-e-Codes/ignoregrets/releases/latest):
 
-- Linux (amd64): `ignoregrets_0.1.3_linux_amd64.tar.gz`
-- Linux (arm64): `ignoregrets_0.1.3_linux_arm64.tar.gz`
-- macOS (amd64): `ignoregrets_0.1.3_darwin_amd64.tar.gz`
-- macOS (arm64): `ignoregrets_0.1.3_darwin_arm64.tar.gz`
-- Windows (amd64): `ignoregrets_0.1.3_windows_amd64.zip`
-- Windows (arm64): `ignoregrets_0.1.3_windows_arm64.zip`
+- Linux (amd64): `ignoregrets_0.1.4_linux_amd64.tar.gz`
+- Linux (arm64): `ignoregrets_0.1.4_linux_arm64.tar.gz`
+- macOS (amd64): `ignoregrets_0.1.4_darwin_amd64.tar.gz`
+- macOS (arm64): `ignoregrets_0.1.4_darwin_arm64.tar.gz`
+- Windows (amd64): `ignoregrets_0.1.4_windows_amd64.zip`
+- Windows (arm64): `ignoregrets_0.1.4_windows_arm64.zip`
 
 SHA256 checksums are provided in `checksums.txt` on the release page.
 

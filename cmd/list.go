@@ -28,10 +28,10 @@ Snapshots are sorted by commit hash and timestamp.`,
 		}
 
 		type snapshotInfo struct {
-			path      string
 			commit    string
 			timestamp time.Time
 			index     int
+			fileCount int
 		}
 
 		var snapshots []snapshotInfo
@@ -53,10 +53,10 @@ Snapshots are sorted by commit hash and timestamp.`,
 				}
 
 				snapshots = append(snapshots, snapshotInfo{
-					path:      file.Name(),
 					commit:    manifest.CommitHash,
 					timestamp: manifest.Timestamp,
 					index:     manifest.Index,
+					fileCount: len(manifest.Files),
 				})
 			}
 		}
@@ -89,7 +89,7 @@ Snapshots are sorted by commit hash and timestamp.`,
 			fmt.Printf("  [%d] %s (%d files)\n",
 				s.index,
 				s.timestamp.Format("2006-01-02 15:04:05"),
-				len(s.path))
+				s.fileCount)
 		}
 
 		return nil
