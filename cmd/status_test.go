@@ -1,6 +1,10 @@
 package cmd
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestCompareWithSnapshotPreservesModifiedChecksums(t *testing.T) {
 	snapshotFiles := map[string]string{
@@ -48,5 +52,21 @@ func TestCompareWithSnapshotDoesNotMutateCurrentChecksums(t *testing.T) {
 	}
 	if current["b.txt"] != "two" {
 		t.Fatalf("currentChecksums[b.txt] = %q, want %q", current["b.txt"], "two")
+	}
+}
+
+func TestCalculateChecksumForSymlink(t *testing.T) {
+	dir := t.TempDir()
+	link := filepath.Join(dir, "link.txt")
+	if err := os.Symlink("target.txt", link); err != nil {
+		t.Fatalf("failed to create symlink: %v", err)
+	}
+
+	checksum, err := calculateChecksum(link)
+	if err != nil {
+		t.Fatalf("calculateChecksum failed: %v", err)
+	}
+	if checksum != "symlink:target.txt" {
+		t.Fatalf("checksum = %q, want %q", checksum, "symlink:target.txt")
 	}
 }

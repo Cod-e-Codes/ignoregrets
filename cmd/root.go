@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -19,16 +21,18 @@ The tool prioritizes simplicity, safety, and predictability for a solo developer
 
 Snapshots of your Git-ignored files. Because resets shouldn't mean regrets.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Skip git repo check for help and completion commands
 		if cmd.Name() == "help" || cmd.Name() == "completion" {
 			return nil
 		}
 
-		// Check if we're in a git repository
-		if err := isGitRepo(); err != nil {
+		root, err := gitRoot()
+		if err != nil {
 			return fmt.Errorf("not a Git repository: %w", err)
 		}
-		return nil
+		if err := os.Chdir(root); err != nil {
+			return fmt.Errorf("failed to change to Git root: %w", err)
+		}
+		return initConfig()
 	},
 }
 
@@ -37,35 +41,24 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
-func init() {
-	cobra.OnInitialize(initConfig)
-}
-
-func initConfig() {
-	// Create .ignoregrets directory if it doesn't exist
+func initConfig() error {
 	ignoregretsDir := filepath.Join(".", ".ignoregrets")
 	if err := os.MkdirAll(ignoregretsDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating .ignoregrets directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create .ignoregrets directory: %w", err)
 	}
 
-	// Create snapshots directory if it doesn't exist
 	snapshotsDir := filepath.Join(ignoregretsDir, "snapshots")
 	if err := os.MkdirAll(snapshotsDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating snapshots directory: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-// isGitRepo checks if the current directory is a git repository
-func isGitRepo() error {
-	gitDir := filepath.Join(".", ".git")
-	_, err := os.Stat(gitDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf(".git directory not found")
-		}
-		return err
+		return fmt.Errorf("failed to create snapshots directory: %w", err)
 	}
 	return nil
+}
+
+func gitRoot() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
 }

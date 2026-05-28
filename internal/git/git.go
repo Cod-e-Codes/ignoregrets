@@ -20,43 +20,21 @@ func GetCurrentCommit() (string, error) {
 
 // GetIgnoredFiles returns a list of ignored files
 func GetIgnoredFiles() ([]string, error) {
-	cmd := exec.Command("git", "ls-files", "--others", "--exclude-standard")
+	cmd := exec.Command("git", "ls-files", "--others", "--ignored", "--exclude-standard")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ignored files: %w", err)
 	}
 
+	seen := make(map[string]bool)
 	var files []string
 	for _, file := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if file != "" {
+		if file != "" && !seen[file] {
+			seen[file] = true
 			files = append(files, file)
 		}
 	}
 
-	// Also check .git/info/exclude
-	excludeFiles, err := getExcludeFiles()
-	if err != nil {
-		return nil, err
-	}
-	files = append(files, excludeFiles...)
-
-	return files, nil
-}
-
-// getExcludeFiles returns files excluded by .git/info/exclude
-func getExcludeFiles() ([]string, error) {
-	cmd := exec.Command("git", "ls-files", "--others", "--exclude-from=.git/info/exclude")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list excluded files: %w", err)
-	}
-
-	var files []string
-	for _, file := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if file != "" {
-			files = append(files, file)
-		}
-	}
 	return files, nil
 }
 

@@ -1,3 +1,39 @@
+# ignoregrets v0.1.5
+
+Bug fix and hardening release for ignored-file detection, restore safety, and CLI behavior from subdirectories.
+
+## Changes
+
+- Use `git ls-files --others --ignored --exclude-standard` with deduplication (fixes double-counting and non-ignored untracked files)
+- Resolve Git worktree root and run commands from repo root (fixes subdirectory usage)
+- Match snapshot symlink checksums in `status` (`symlink:<target>` sentinel)
+- Path-scoped `include`/`exclude` globs; basename patterns unchanged
+- Newest-first snapshot selection for `--snapshot 0` in restore
+- Harden restore against path traversal, absolute paths, and symlink parent directories
+- Reuse `ReadManifest` during restore; remove duplicate reader
+- Add regression tests; pass `go test -race ./...`
+
+## Installation
+
+### Windows
+1. Download `ignoregrets_v0.1.5_windows_amd64.exe`
+2. Rename to `ignoregrets.exe`
+3. Move to a directory in your PATH
+
+### Linux
+1. Download `ignoregrets_v0.1.5_linux_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.5_linux_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+### macOS
+1. Download `ignoregrets_v0.1.5_darwin_amd64`
+2. Make executable: `chmod +x ignoregrets_v0.1.5_darwin_amd64`
+3. Move to `/usr/local/bin/ignoregrets`
+
+For more information, see the [README](README.md).
+
+---
+
 # ignoregrets v0.1.4
 
 Bug fix release for status, list, and restore behavior.

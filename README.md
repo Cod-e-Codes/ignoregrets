@@ -26,12 +26,12 @@ For scope, CI/CD patterns, and integration examples, see [Advanced usage and pos
 
 Download the latest release from [GitHub Releases](https://github.com/Cod-e-Codes/ignoregrets/releases/latest):
 
-- Linux (amd64): `ignoregrets_0.1.4_linux_amd64.tar.gz`
-- Linux (arm64): `ignoregrets_0.1.4_linux_arm64.tar.gz`
-- macOS (amd64): `ignoregrets_0.1.4_darwin_amd64.tar.gz`
-- macOS (arm64): `ignoregrets_0.1.4_darwin_arm64.tar.gz`
-- Windows (amd64): `ignoregrets_0.1.4_windows_amd64.zip`
-- Windows (arm64): `ignoregrets_0.1.4_windows_arm64.zip`
+- Linux (amd64): `ignoregrets_0.1.5_linux_amd64.tar.gz`
+- Linux (arm64): `ignoregrets_0.1.5_linux_arm64.tar.gz`
+- macOS (amd64): `ignoregrets_0.1.5_darwin_amd64.tar.gz`
+- macOS (arm64): `ignoregrets_0.1.5_darwin_arm64.tar.gz`
+- Windows (amd64): `ignoregrets_0.1.5_windows_amd64.zip`
+- Windows (arm64): `ignoregrets_0.1.5_windows_arm64.zip`
 
 SHA256 checksums are provided in `checksums.txt` on the release page.
 
@@ -40,7 +40,7 @@ SHA256 checksums are provided in `checksums.txt` on the release page.
 ```bash
 go install github.com/Cod-e-Codes/ignoregrets@latest
 ```
-Requires Go 1.24.4 or later.
+Requires Go 1.25.10 or later.
 
 ## Quick Start
 
@@ -203,7 +203,7 @@ snapshot_on: [commit]      # Git events for auto-snapshot
 restore_on: [checkout]     # Git events for auto-restore
 hooks_enabled: false       # Enable Git hooks
 exclude: ["*.log"]         # Glob patterns to exclude
-include: [".env"]          # Additional files to include
+include: [".env"]          # Ignored files to force-include
 ```
 
 Override retention with CLI flags:

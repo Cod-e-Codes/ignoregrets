@@ -182,9 +182,122 @@ func TestFilterFiles(t *testing.T) {
 	}
 }
 
+func TestFilterFilesPathScopedPatterns(t *testing.T) {
+	files := []string{
+		"build/config.json",
+		"other/config.json",
+		"build/debug.log",
+	}
+
+	cfg := &config.Config{
+		Exclude: []string{"*.json", "build/*.log"},
+		Include: []string{"build/config.json"},
+	}
+
+	filtered := filterFiles(files, cfg)
+	got := make(map[string]bool)
+	for _, file := range filtered {
+		got[file] = true
+	}
+
+	if !got["build/config.json"] {
+		t.Error("Expected path-scoped include to restore build/config.json")
+	}
+	if got["other/config.json"] {
+		t.Error("Path-scoped include matched config.json outside build")
+	}
+	if got["build/debug.log"] {
+		t.Error("Path-scoped exclude did not remove build/debug.log")
+	}
+}
+
+func TestFindSnapshotUsesNewestFirst(t *testing.T) {
+	dir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer chdir(t, oldDir)
+	chdir(t, dir)
+
+	snapshotDir := filepath.Join(".ignoregrets", "snapshots")
+	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
+		t.Fatalf("Failed to create snapshot directory: %v", err)
+	}
+
+	commit := "abc123"
+	oldSnapshot := filepath.Join(snapshotDir, commit+"_20260101T0000_0.tar.gz")
+	newSnapshot := filepath.Join(snapshotDir, commit+"_20260102T0000_1.tar.gz")
+	for _, file := range []string{oldSnapshot, newSnapshot} {
+		if err := os.WriteFile(file, []byte("test"), 0644); err != nil {
+			t.Fatalf("Failed to create snapshot file: %v", err)
+		}
+	}
+
+	got, err := findSnapshot(commit, 0)
+	if err != nil {
+		t.Fatalf("findSnapshot failed: %v", err)
+	}
+	if got != newSnapshot {
+		t.Fatalf("findSnapshot index 0 = %q, want %q", got, newSnapshot)
+	}
+}
+
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("Failed to change directory to %s: %v", dir, err)
+	}
+}
+
+func TestRestoreFileRejectsUnsafePath(t *testing.T) {
+	hdr := &tar.Header{
+		Name:     "../escape.txt",
+		Typeflag: tar.TypeReg,
+		Mode:     0644,
+	}
+
+	if err := restoreFile(nil, hdr, false, false); err == nil {
+		t.Fatal("Expected restoreFile to reject path traversal")
+	}
+}
+
+func TestRestoreFileRejectsSymlinkParent(t *testing.T) {
+	dir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer chdir(t, oldDir)
+	chdir(t, dir)
+
+	if err := os.Mkdir("target", 0755); err != nil {
+		t.Fatalf("failed to create target directory: %v", err)
+	}
+	if err := os.Symlink("target", "linkdir"); err != nil {
+		t.Fatalf("failed to create symlink directory: %v", err)
+	}
+
+	hdr := &tar.Header{
+		Name:     filepath.Join("linkdir", "file.txt"),
+		Typeflag: tar.TypeReg,
+		Mode:     0644,
+	}
+	if err := restoreFile(nil, hdr, false, false); err == nil {
+		t.Fatal("Expected restoreFile to reject symlink parent")
+	}
+}
+
 func TestRestoreFileForceOverwritesExistingSymlink(t *testing.T) {
 	dir := t.TempDir()
-	linkPath := filepath.Join(dir, "link.txt")
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer chdir(t, oldDir)
+	chdir(t, dir)
+
+	linkPath := "link.txt"
 	if err := os.Symlink("wrong-target", linkPath); err != nil {
 		t.Fatalf("failed to create existing symlink: %v", err)
 	}
@@ -211,7 +324,14 @@ func TestRestoreFileForceOverwritesExistingSymlink(t *testing.T) {
 
 func TestRestoreFileSkipsExistingSymlinkWithoutForce(t *testing.T) {
 	dir := t.TempDir()
-	linkPath := filepath.Join(dir, "link.txt")
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer chdir(t, oldDir)
+	chdir(t, dir)
+
+	linkPath := "link.txt"
 	if err := os.Symlink("keep-me", linkPath); err != nil {
 		t.Fatalf("failed to create existing symlink: %v", err)
 	}

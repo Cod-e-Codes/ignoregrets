@@ -34,7 +34,7 @@
 ```
 
 Each snapshot includes:
-- Git-ignored files (via `git ls-files --others --exclude-standard` and `.git/info/exclude`).
+- Git-ignored files (via `git ls-files --others --ignored --exclude-standard`).
 - `manifest.json` with:
   - Commit hash
   - Timestamp
@@ -80,7 +80,7 @@ include: []
 - `restore_on`: Git events triggering restores (e.g., `checkout`).
 - `hooks_enabled`: Enables/disables Git hooks.
 - `exclude`: Glob patterns to exclude from snapshots (e.g., `*.log`).
-- `include`: Additional paths to include in snapshots (e.g., specific untracked files).
+- `include`: Ignored files to force-include in snapshots (basename or path-scoped globs).
 - CLI flags override config (e.g., `--retention=5`, `--force`).
 
 ## Git Integration
@@ -94,7 +94,7 @@ Hooks are lightweight, opt-in, and do not modify Git behavior. Manual `snapshot`
 
 - **Language**: Go for static binaries and cross-platform support (Linux, macOS, Windows).
 - **Dependencies**: Standard Go libraries (`os`, `archive/tar`, `compress/gzip`, `filepath`) and `git` CLI for ignored file detection.
-- **Snapshots**: `.tar.gz` format to preserve directories and symbolic links. Includes files from `git ls-files --others --exclude-standard` and `.git/info/exclude`, plus `include` paths from config.
+- **Snapshots**: `.tar.gz` format to preserve directories and symbolic links. Includes ignored files from `git ls-files --others --ignored --exclude-standard`, then applies config filters.
 - **Validation**: SHA256 checksums in `manifest.json` ensure snapshot integrity.
 - **Error Handling**: Clear stderr messages and non-zero exit codes for failures (e.g., no Git repo, corrupted snapshots, missing commits).
 - **Performance**: Tested for large files; `exclude` patterns mitigate storage bloat.
@@ -129,7 +129,7 @@ Hooks are lightweight, opt-in, and do not modify Git behavior. Manual `snapshot`
 | Non-Git directories | Check for `.git/`; exit with clear error if absent. |
 | Symlink/permission issues | Warn on unsupported file types; test edge cases. |
 | Multiple snapshots per commit | Use `<commit>_<timestamp>_<index>.tar.gz` naming; allow `--snapshot <index>` for selection. |
-| Custom Git exclude rules | Include `.git/info/exclude` files; support `include` for additional paths. |
+| Custom Git exclude rules | Include `.git/info/exclude` files; support basename and path-scoped `include` globs. |
 
 ## Example Usage Scenario
 

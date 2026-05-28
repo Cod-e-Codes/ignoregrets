@@ -149,8 +149,20 @@ func compareWithSnapshot(snapshotFiles, currentChecksums map[string]string) stat
 	return result
 }
 
-// calculateChecksum calculates the SHA256 checksum of a file
+// calculateChecksum calculates the snapshot checksum of a file
 func calculateChecksum(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return "", err
+		}
+		return "symlink:" + target, nil
+	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err

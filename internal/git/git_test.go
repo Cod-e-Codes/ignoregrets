@@ -107,6 +107,7 @@ func TestGetIgnoredFiles(t *testing.T) {
 		"ignored1.txt",
 		"ignored2.log",
 		"build/output.js",
+		"local.secret",
 	}
 	for _, file := range ignoredFiles {
 		dir := filepath.Dir(file)
@@ -125,11 +126,23 @@ func TestGetIgnoredFiles(t *testing.T) {
 	if err := os.WriteFile(".gitignore", []byte(gitignore), 0644); err != nil {
 		t.Fatalf("Failed to create .gitignore: %v", err)
 	}
+	if err := os.WriteFile(filepath.Join(".git", "info", "exclude"), []byte("*.secret\n"), 0644); err != nil {
+		t.Fatalf("Failed to create .git/info/exclude: %v", err)
+	}
+	if err := os.WriteFile("not-ignored.md", []byte("not ignored"), 0644); err != nil {
+		t.Fatalf("Failed to create non-ignored file: %v", err)
+	}
 
 	// Get ignored files
 	files, err := GetIgnoredFiles()
 	if err != nil {
 		t.Fatalf("Failed to get ignored files: %v", err)
+	}
+
+	for _, actual := range files {
+		if actual == "not-ignored.md" {
+			t.Error("Non-ignored file was returned")
+		}
 	}
 
 	// Verify all files are found

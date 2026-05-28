@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/Cod-e-Codes/ignoregrets/internal/config"
@@ -134,97 +137,96 @@ func CreateSnapshot(cfg *config.Config) error {
 	return nil
 }
 
-// readManifestFromSnapshot reads the manifest from a snapshot file
-func readManifestFromSnapshot(file *os.File) (*Manifest, error) {
-	gr, err := gzip.NewReader(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gr.Close()
-
-	tr := tar.NewReader(gr)
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		if hdr.Name == "manifest.json" {
-			data, err := io.ReadAll(tr)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read manifest: %w", err)
-			}
-
-			manifest := &Manifest{}
-			if err := json.Unmarshal(data, manifest); err != nil {
-				return nil, fmt.Errorf("failed to parse manifest: %w", err)
-			}
-			return manifest, nil
-		}
-	}
-
-	return nil, fmt.Errorf("manifest.json not found in snapshot")
-}
-
 // restoreFile restores a single file from the tar reader
 func restoreFile(tr *tar.Reader, hdr *tar.Header, dryRun bool, force bool) error {
-	// Skip manifest file
 	if hdr.Name == "manifest.json" {
 		return nil
 	}
 
-	// Check if file exists (use Lstat to detect existing symlinks)
-	_, err := os.Lstat(hdr.Name)
+	name, err := cleanRestorePath(hdr.Name)
+	if err != nil {
+		return err
+	}
+
+	if err := checkParentDirs(name); err != nil {
+		return err
+	}
+
+	_, err = os.Lstat(name)
 	exists := err == nil
 	if exists && !force {
 		if dryRun {
-			fmt.Printf("Would skip existing file: %s\n", hdr.Name)
+			fmt.Printf("Would skip existing file: %s\n", name)
 		} else {
-			fmt.Printf("Skipping existing file: %s\n", hdr.Name)
+			fmt.Printf("Skipping existing file: %s\n", name)
 		}
 		return nil
 	}
 
 	if dryRun {
-		fmt.Printf("Would restore: %s\n", hdr.Name)
+		fmt.Printf("Would restore: %s\n", name)
 		return nil
 	}
 
 	if exists && force {
-		if err := os.Remove(hdr.Name); err != nil {
-			return fmt.Errorf("failed to remove existing path: %s: %w", hdr.Name, err)
+		if err := os.Remove(name); err != nil {
+			return fmt.Errorf("failed to remove existing path: %s: %w", name, err)
 		}
 	}
 
-	// Create directory if needed
-	dir := filepath.Dir(hdr.Name)
+	dir := filepath.Dir(name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %s: %w", dir, err)
 	}
 
-	// Handle symlinks
-	if hdr.Typeflag == tar.TypeSymlink {
-		if err := os.Symlink(hdr.Linkname, hdr.Name); err != nil {
-			return fmt.Errorf("failed to create symlink: %s: %w", hdr.Name, err)
+	switch hdr.Typeflag {
+	case tar.TypeSymlink:
+		if err := os.Symlink(hdr.Linkname, name); err != nil {
+			return fmt.Errorf("failed to create symlink: %s: %w", name, err)
 		}
-		return nil
+	case tar.TypeReg:
+		f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
+		if err != nil {
+			return fmt.Errorf("failed to create file: %s: %w", name, err)
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(f, tr); err != nil {
+			return fmt.Errorf("failed to write file: %s: %w", name, err)
+		}
+	default:
+		return fmt.Errorf("unsupported tar entry type for %s", name)
 	}
 
-	// Create regular file
-	f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
-	if err != nil {
-		return fmt.Errorf("failed to create file: %s: %w", hdr.Name, err)
-	}
-	defer f.Close()
+	return nil
+}
 
-	if _, err := io.Copy(f, tr); err != nil {
-		return fmt.Errorf("failed to write file: %s: %w", hdr.Name, err)
+func cleanRestorePath(name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("invalid empty path in snapshot")
 	}
 
+	clean := filepath.Clean(name)
+	if filepath.IsAbs(clean) || clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("invalid path in snapshot: %s", name)
+	}
+
+	return clean, nil
+}
+
+func checkParentDirs(name string) error {
+	for dir := filepath.Dir(name); dir != "." && dir != string(os.PathSeparator); dir = filepath.Dir(dir) {
+		info, err := os.Lstat(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("failed to inspect directory: %s: %w", dir, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("refusing to restore through symlink directory: %s", dir)
+		}
+	}
 	return nil
 }
 
@@ -242,7 +244,7 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 	defer file.Close()
 
 	// Read manifest first
-	manifest, err := readManifestFromSnapshot(file)
+	manifest, err := ReadManifest(file)
 	if err != nil {
 		return err
 	}
@@ -284,15 +286,12 @@ func RestoreSnapshot(commit string, index int, force, dryRun bool) error {
 
 // filterFiles applies exclude/include patterns from config
 func filterFiles(files []string, cfg *config.Config) []string {
-	// Create a map for O(1) lookups
 	included := make(map[string]bool)
 
-	// First, add all files that don't match exclude patterns
 	for _, file := range files {
 		excluded := false
 		for _, pattern := range cfg.Exclude {
-			matched, err := filepath.Match(pattern, filepath.Base(file))
-			if err == nil && matched {
+			if matchPattern(pattern, file) {
 				excluded = true
 				break
 			}
@@ -302,23 +301,33 @@ func filterFiles(files []string, cfg *config.Config) []string {
 		}
 	}
 
-	// Then, add files that match include patterns, even if they were excluded
 	for _, pattern := range cfg.Include {
 		for _, file := range files {
-			matched, err := filepath.Match(pattern, filepath.Base(file))
-			if err == nil && matched {
+			if matchPattern(pattern, file) {
 				included[file] = true
 			}
 		}
 	}
 
-	// Convert map back to slice
 	result := make([]string, 0, len(included))
 	for file := range included {
 		result = append(result, file)
 	}
 
 	return result
+}
+
+func matchPattern(pattern, file string) bool {
+	pattern = filepath.ToSlash(filepath.Clean(pattern))
+	file = filepath.ToSlash(filepath.Clean(file))
+
+	if strings.Contains(pattern, "/") {
+		matched, err := path.Match(pattern, file)
+		return err == nil && matched
+	}
+
+	matched, err := path.Match(pattern, path.Base(file))
+	return err == nil && matched
 }
 
 // getNextIndex returns the next available index for a commit
@@ -341,6 +350,8 @@ func findSnapshot(commit string, index int) (string, error) {
 	if len(matches) == 0 {
 		return "", fmt.Errorf("no snapshots found for commit %s", commit)
 	}
+
+	sort.Sort(sort.Reverse(sort.StringSlice(matches)))
 
 	if index >= len(matches) {
 		return "", fmt.Errorf("snapshot index %d not found for commit %s", index, commit)

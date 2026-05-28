@@ -126,7 +126,7 @@ exclude:
 include:
   - ".env"
   - "build/config.json"
-  - "dist/assets/"
+  - "dist/assets/*"
 ```
 
 #### Storage Management
@@ -231,7 +231,7 @@ ignoregrets inspect --verbose
 ignoregrets status --verbose
 
 # Verify Git integration
-git ls-files --others --exclude-standard
+git ls-files --others --ignored --exclude-standard
 git rev-parse HEAD
 
 # Check file permissions
