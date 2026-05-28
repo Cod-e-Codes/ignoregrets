@@ -1,6 +1,6 @@
 module github.com/Cod-e-Codes/ignoregrets
 
-go 1.24.4
+go 1.25.10
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
